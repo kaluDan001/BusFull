@@ -1,24 +1,38 @@
+import { useEffect, useState } from "react";
 import { FlatList, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import BusCard from "../components/BusCard";
+import { Bus, getBuses } from "../transit";
 
-const PLAZA_DRIVE = [
-  { id: "1", route: "11", destination: "To University", minutes: 3 },
-  { id: "2", route: "60", destination: "To Downtown", minutes: 9 },
-  { id: "3", route: "162", destination: "To Pembina", minutes: 14 },
-];
+// Replace these with your real stop numbers.
+const STOP_A = { name: "Plaza Drive", number: "60144" };
+const STOP_B = { name: "Plaza Station(S)", number: "61211" };
 
-const PLAZA = [
-  { id: "4", route: "11", destination: "To University", minutes: 3 },
-  { id: "5", route: "78", destination: "To Seven Oaks", minutes: 7 },
-  { id: "6", route: "60", destination: "To Downtown", minutes: 12 },
-];
+function StopColumn({ name, number }: { name: string; number: string }) {
+  const [buses, setBuses] = useState<Bus[]>([]);
+  const [error, setError] = useState("");
 
-type Bus = { id: string; route: string; destination: string; minutes: number };
+  // useEffect runs this code when the screen loads, not on every redraw.
+  useEffect(() => {
+    const load = () =>
+      getBuses(number)
+        .then((b) => {
+          setBuses(b);
+          setError("");
+        })
+        .catch(() => setError("Couldn't load buses"));
 
-function StopColumn({ name, buses }: { name: string; buses: Bus[] }) {
+    load();
+    const timer = setInterval(load, 30000); // refresh every 30 seconds
+    return () => clearInterval(timer); // stop refreshing when leaving
+  }, [number]);
+
   return (
     <View style={styles.column}>
       <Text style={styles.stopName}>{name}</Text>
+      {error ? <Text style={styles.message}>{error}</Text> : null}
+      {!error && buses.length === 0 ? (
+        <Text style={styles.message}>No upcoming buses</Text>
+      ) : null}
       <FlatList
         data={buses}
         keyExtractor={(bus) => bus.id}
@@ -27,6 +41,7 @@ function StopColumn({ name, buses }: { name: string; buses: Bus[] }) {
             route={item.route}
             destination={item.destination}
             minutes={item.minutes}
+            color={item.color}
           />
         )}
       />
@@ -39,8 +54,8 @@ export default function App() {
     <SafeAreaView style={styles.screen}>
       <Text style={styles.title}>BusFull</Text>
       <View style={styles.row}>
-        <StopColumn name="Plaza Drive" buses={PLAZA_DRIVE} />
-        <StopColumn name="Plaza" buses={PLAZA} />
+        <StopColumn name={STOP_A.name} number={STOP_A.number} />
+        <StopColumn name={STOP_B.name} number={STOP_B.number} />
       </View>
     </SafeAreaView>
   );
@@ -52,4 +67,5 @@ const styles = StyleSheet.create({
   row: { flex: 1, flexDirection: "row", gap: 8 },
   column: { flex: 1 },
   stopName: { fontSize: 16, fontWeight: "600", marginBottom: 8, marginLeft: 2 },
+  message: { fontSize: 13, color: "#666", marginLeft: 2, marginBottom: 8 },
 });

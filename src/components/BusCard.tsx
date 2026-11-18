@@ -12,15 +12,16 @@ type Props = {
   route: string;
   destination: string;
   minutes: number;
+  color?: string;
 };
 
-export default function BusCard({ route, destination, minutes }: Props) {
+export default function BusCard({ route, destination, minutes, color}: Props) {
   const [fullness, setFullness] = useState("");
 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.route}>{route}</Text>
+        <Text style={[styles.route, color ? { backgroundColor: color } : null]}>{route}</Text>
         <View style={{ flex: 1 }}>
           <Text style={styles.destination} numberOfLines={1}>
             {destination}
