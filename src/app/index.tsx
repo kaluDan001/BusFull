@@ -1,30 +1,38 @@
 import { useEffect, useState } from "react";
 import { FlatList, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import BusCard from "../components/BusCard";
+import { Report, getReports, sendReport } from "../reports";
 import { Bus, getBuses } from "../transit";
 
-// Replace these with your real stop numbers.
-const STOP_A = { name: "Plaza Drive", number: "60144" };
-const STOP_B = { name: "Plaza Station(S)", number: "61211" };
+// Stop numbers. Change STOP_B to your real northbound Plaza Station stop.
+const STOP_A = { name: "Plaza Station (S)", number: "61211" };
+const STOP_B = { name: "Plaza Station (N)", number: "10541" };
 
 function StopColumn({ name, number }: { name: string; number: string }) {
   const [buses, setBuses] = useState<Bus[]>([]);
+  const [reports, setReports] = useState<Record<string, Report>>({});
   const [error, setError] = useState("");
 
-  // useEffect runs this code when the screen loads, not on every redraw.
   useEffect(() => {
-    const load = () =>
+    const load = () => {
       getBuses(number)
         .then((b) => {
           setBuses(b);
           setError("");
         })
         .catch(() => setError("Couldn't load buses"));
+      getReports(number).then(setReports).catch(() => {});
+    };
 
     load();
-    const timer = setInterval(load, 30000); // refresh every 30 seconds
-    return () => clearInterval(timer); // stop refreshing when leaving
+    const timer = setInterval(load, 30000);
+    return () => clearInterval(timer);
   }, [number]);
+
+  const report = (bus: Bus, level: string) =>
+    sendReport(bus.id, number, bus.route, level)
+      .then(() => getReports(number).then(setReports))
+      .catch(() => setError("Couldn't send report"));
 
   return (
     <View style={styles.column}>
@@ -42,6 +50,8 @@ function StopColumn({ name, number }: { name: string; number: string }) {
             destination={item.destination}
             minutes={item.minutes}
             color={item.color}
+            latest={reports[item.id]}
+            onReport={(level) => report(item, level)}
           />
         )}
       />
